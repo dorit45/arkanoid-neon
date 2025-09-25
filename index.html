@@ -1,0 +1,1970 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arkanoid Neón: Aventura Japonesa</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Orbitron', monospace;
+            background: #000;
+            overflow: hidden;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #16213e 100%);
+            overflow: hidden;
+        }
+        
+        .background-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0a2e 0%, #2d1b69 25%, #11998e 50%, #38ef7d 75%, #ff006e 100%);
+            opacity: 0.3;
+        }
+        
+        .background-image::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                repeating-linear-gradient(90deg, transparent, transparent 98px, rgba(255, 0, 255, 0.3) 100px),
+                repeating-linear-gradient(0deg, transparent, transparent 98px, rgba(0, 255, 255, 0.3) 100px);
+        }
+        
+        .neon-buildings {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40%;
+            background: 
+                linear-gradient(to top, rgba(255, 0, 255, 0.4) 0%, transparent 50%),
+                radial-gradient(ellipse at 20% 100%, rgba(0, 255, 255, 0.6) 0%, transparent 70%),
+                radial-gradient(ellipse at 80% 100%, rgba(255, 255, 0, 0.6) 0%, transparent 70%);
+        }
+        
+        .game-canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            box-shadow: 0 0 30px #00ffff, inset 0 0 20px rgba(0, 255, 255, 0.2);
+            background: rgba(0, 0, 20, 0.3);
+            z-index: 2;
+        }
+        
+        .ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+        }
+        
+        .score-panel, .level-panel, .lives-panel {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #ff00ff;
+            border-radius: 10px;
+            padding: 15px 20px;
+            color: #00ffff;
+            text-align: center;
+            box-shadow: 0 0 20px #ff00ff;
+            backdrop-filter: blur(10px);
+        }
+        
+        .score-value, .level-value, .lives-value {
+            font-size: 24px;
+            font-weight: 900;
+            color: #ffff00;
+            text-shadow: 0 0 10px #ffff00;
+            margin: 5px 0;
+        }
+
+        .audio-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 15;
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .audio-button {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #00ffff;
+            border-radius: 8px;
+            padding: 10px;
+            color: #00ffff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .audio-button:hover {
+            background: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        .audio-button.muted {
+            color: #ff4040;
+            border-color: #ff4040;
+        }
+        
+        .menu-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            backdrop-filter: blur(15px);
+        }
+
+        .gamepad-decorations {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .gamepad-icon {
+            position: absolute;
+            font-size: 60px;
+            opacity: 0.3;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .gamepad-left {
+            top: 20%;
+            left: 10%;
+            color: #ff00ff;
+            text-shadow: 0 0 20px #ff00ff;
+            animation-delay: 0s;
+        }
+
+        .gamepad-right {
+            top: 60%;
+            right: 10%;
+            color: #00ffff;
+            text-shadow: 0 0 20px #00ffff;
+            animation-delay: 2s;
+        }
+
+        .controller-buttons {
+            position: absolute;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            opacity: 0.4;
+        }
+
+        .controller-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            font-size: 18px;
+            animation: pulse-controller 3s ease-in-out infinite;
+        }
+
+        .btn-x {
+            background: rgba(255, 0, 255, 0.1);
+            border-color: #ff00ff;
+            color: #ff00ff;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+            animation-delay: 0s;
+        }
+
+        .btn-o {
+            background: rgba(0, 255, 255, 0.1);
+            border-color: #00ffff;
+            color: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            animation-delay: 0.5s;
+        }
+
+        .btn-square {
+            background: rgba(255, 255, 0, 0.1);
+            border-color: #ffff00;
+            color: #ffff00;
+            box-shadow: 0 0 15px rgba(255, 255, 0, 0.5);
+            animation-delay: 1s;
+        }
+
+        .btn-triangle {
+            background: rgba(255, 64, 128, 0.1);
+            border-color: #ff4080;
+            color: #ff4080;
+            box-shadow: 0 0 15px rgba(255, 64, 128, 0.5);
+            animation-delay: 1.5s;
+        }
+
+        .d-pad {
+            position: absolute;
+            top: 25%;
+            left: 5%;
+            width: 80px;
+            height: 80px;
+            opacity: 0.3;
+        }
+
+        .d-pad-cross {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .d-pad-horizontal,
+        .d-pad-vertical {
+            position: absolute;
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+        }
+
+        .d-pad-horizontal {
+            width: 80px;
+            height: 20px;
+            top: 30px;
+            left: 0;
+        }
+
+        .d-pad-vertical {
+            width: 20px;
+            height: 80px;
+            top: 0;
+            left: 30px;
+        }
+
+        .analog-stick {
+            position: absolute;
+            top: 45%;
+            right: 8%;
+            width: 60px;
+            height: 60px;
+            border: 3px solid #00ffff;
+            border-radius: 50%;
+            background: rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+            opacity: 0.4;
+            animation: rotate-stick 8s linear infinite;
+        }
+
+        .analog-stick::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            background: #00ffff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ffff;
+        }
+
+        @keyframes float {
+            0%, 100% { 
+                transform: translateY(0px) rotate(0deg); 
+                opacity: 0.2;
+            }
+            50% { 
+                transform: translateY(-20px) rotate(5deg); 
+                opacity: 0.4;
+            }
+        }
+
+        @keyframes pulse-controller {
+            0%, 100% { 
+                transform: scale(1);
+                box-shadow: 0 0 15px rgba(255, 0, 255, 0.3);
+            }
+            50% { 
+                transform: scale(1.1);
+                box-shadow: 0 0 25px rgba(255, 0, 255, 0.7);
+            }
+        }
+
+        @keyframes rotate-stick {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .game-title {
+            font-size: 48px;
+            font-weight: 900;
+            background: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00, #ff00ff);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient-flow 3s ease-in-out infinite;
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 0 0 30px rgba(255, 0, 255, 0.8);
+        }
+        
+        .game-subtitle {
+            font-size: 20px;
+            color: #00ffff;
+            text-align: center;
+            margin-bottom: 50px;
+            text-shadow: 0 0 15px #00ffff;
+        }
+        
+        .menu-button {
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            border: none;
+            color: #000;
+            font-family: 'Orbitron', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .menu-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
+            background: linear-gradient(45deg, #00ffff, #ffff00);
+        }
+
+        .privacy-button {
+            font-size: 14px;
+            padding: 12px 25px;
+            margin-top: 20px;
+            background: linear-gradient(45deg, #666, #999);
+            box-shadow: 0 0 15px rgba(153, 153, 153, 0.3);
+        }
+
+        .privacy-button:hover {
+            background: linear-gradient(45deg, #888, #bbb);
+            box-shadow: 0 0 20px rgba(153, 153, 153, 0.6);
+        }
+        
+        .game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 25;
+            backdrop-filter: blur(20px);
+        }
+        
+        .game-over-title {
+            font-size: 60px;
+            font-weight: 900;
+            color: #ff0040;
+            text-shadow: 0 0 30px #ff0040;
+            margin-bottom: 20px;
+            animation: pulse-red 2s ease-in-out infinite;
+        }
+        
+        .final-score {
+            font-size: 24px;
+            color: #00ffff;
+            margin-bottom: 30px;
+            text-shadow: 0 0 15px #00ffff;
+        }
+        
+        .speed-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 22;
+            backdrop-filter: blur(20px);
+        }
+        
+        .speed-title {
+            font-size: 36px;
+            font-weight: 900;
+            color: #ff00ff;
+            text-shadow: 0 0 20px #ff00ff;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .speed-option {
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            border: none;
+            color: #000;
+            font-family: 'Orbitron', monospace;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 15px 40px;
+            margin: 8px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            min-width: 250px;
+        }
+        
+        .speed-option:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.6);
+            background: linear-gradient(45deg, #00ffff, #ffff00);
+        }
+        
+        .speed-option.extreme {
+            background: linear-gradient(45deg, #ff0040, #ff8000);
+            animation: pulse-extreme 2s ease-in-out infinite;
+        }
+        
+        .speed-description {
+            font-size: 12px;
+            color: #fff;
+            margin-top: 5px;
+        }
+        
+        .ad-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.98);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+        }
+        
+        .ad-container {
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            padding: 3px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .ad-content {
+            background: #000;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            color: #fff;
+            max-width: 400px;
+        }
+        
+        .ad-sponsor {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+        
+        .ad-title {
+            font-size: 24px;
+            font-weight: 900;
+            color: #ffff00;
+            margin-bottom: 20px;
+            text-shadow: 0 0 15px #ffff00;
+        }
+        
+        .ad-text {
+            font-size: 16px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .ad-timer {
+            font-size: 18px;
+            color: #ff00ff;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        
+        .ad-controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .ad-skip, .ad-close {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 20px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .ad-skip {
+            background: #666;
+            color: #fff;
+        }
+        
+        .ad-skip:hover:not(:disabled) {
+            background: #888;
+            transform: scale(1.05);
+        }
+        
+        .ad-skip:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+        
+        .ad-close {
+            background: linear-gradient(45deg, #00ff00, #80ff00);
+            color: #000;
+        }
+        
+        .ad-close:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+        }
+        
+        .instructions-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 25;
+            backdrop-filter: blur(15px);
+        }
+        
+        .instructions-content {
+            background: rgba(0, 0, 20, 0.9);
+            border: 2px solid #00ffff;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            color: #fff;
+            text-align: center;
+            box-shadow: 0 0 30px #00ffff;
+        }
+        
+        .instructions-title {
+            font-size: 28px;
+            color: #ffff00;
+            margin-bottom: 20px;
+            text-shadow: 0 0 15px #ffff00;
+        }
+        
+        .instructions-text {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: #00ffff;
+        }
+        
+        .instructions-continue {
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            border: none;
+            color: #000;
+            font-family: 'Orbitron', monospace;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 12px 30px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .instructions-continue:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.6);
+        }
+        
+        .celebration-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 28;
+            backdrop-filter: blur(10px);
+        }
+        
+        .celebration-content {
+            text-align: center;
+            animation: celebration-bounce 1s ease-out;
+        }
+        
+        .celebration-title {
+            font-size: 48px;
+            font-weight: 900;
+            background: linear-gradient(45deg, #ffff00, #ff00ff, #00ffff, #ffff00);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient-flow 1s ease-in-out infinite, celebration-pulse 2s ease-in-out infinite;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(255, 255, 0, 0.8);
+        }
+        
+        .celebration-subtitle {
+            font-size: 24px;
+            color: #00ffff;
+            margin-bottom: 30px;
+            text-shadow: 0 0 15px #00ffff;
+            animation: celebration-glow 2s ease-in-out infinite;
+        }
+        
+        .celebration-bonus {
+            font-size: 36px;
+            color: #ffff00;
+            font-weight: 900;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #ffff00;
+            animation: celebration-bounce 1.5s ease-in-out infinite;
+        }
+        
+        .celebration-firework {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: firework-explode 2s ease-out forwards;
+        }
+        
+        @keyframes celebration-bounce {
+            0%, 100% { transform: scale(1) translateY(0); }
+            50% { transform: scale(1.1) translateY(-10px); }
+        }
+        
+        @keyframes celebration-pulse {
+            0%, 100% { text-shadow: 0 0 30px rgba(255, 255, 0, 0.8); }
+            50% { text-shadow: 0 0 50px rgba(255, 255, 0, 1), 0 0 80px rgba(255, 0, 255, 0.8); }
+        }
+        
+        @keyframes celebration-glow {
+            0%, 100% { text-shadow: 0 0 15px #00ffff; }
+            50% { text-shadow: 0 0 25px #00ffff, 0 0 40px #00ffff; }
+        }
+        
+        @keyframes firework-explode {
+            0% {
+                opacity: 1;
+                transform: scale(0);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(2);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(4);
+            }
+        }
+        
+        @keyframes gradient-flow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+        
+        @keyframes pulse-extreme {
+            0%, 100% { 
+                box-shadow: 0 0 15px rgba(255, 0, 64, 0.4);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 25px rgba(255, 0, 64, 0.8);
+                transform: scale(1.02);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .game-title {
+                font-size: 32px;
+            }
+            
+            .game-subtitle {
+                font-size: 16px;
+            }
+            
+            .score-panel, .level-panel, .lives-panel {
+                padding: 10px 15px;
+            }
+            
+            .score-value, .level-value, .lives-value {
+                font-size: 18px;
+            }
+
+            .audio-controls {
+                position: static;
+                margin: 10px;
+                justify-content: center;
+            }
+
+            .gamepad-icon {
+                font-size: 40px;
+            }
+
+            .gamepad-left {
+                top: 15%;
+                left: 5%;
+            }
+
+            .gamepad-right {
+                top: 55%;
+                right: 5%;
+            }
+
+            .d-pad {
+                width: 60px;
+                height: 60px;
+                top: 20%;
+                left: 3%;
+            }
+
+            .d-pad-horizontal {
+                width: 60px;
+                height: 15px;
+                top: 22px;
+            }
+
+            .d-pad-vertical {
+                width: 15px;
+                height: 60px;
+                left: 22px;
+            }
+
+            .analog-stick {
+                width: 45px;
+                height: 45px;
+                top: 40%;
+                right: 5%;
+            }
+
+            .analog-stick::before {
+                width: 22px;
+                height: 22px;
+            }
+
+            .controller-buttons {
+                bottom: 10%;
+                gap: 15px;
+            }
+
+            .controller-btn {
+                width: 35px;
+                height: 35px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="background-image"></div>
+        <div class="neon-buildings"></div>
+        
+        <div class="audio-controls">
+            <button class="audio-button" id="musicToggle" onclick="toggleMusic()">🎵 MÚSICA</button>
+            <button class="audio-button" id="sfxToggle" onclick="toggleSFX()">🔊 SFX</button>
+        </div>
+        
+        <div class="ui-overlay">
+            <div class="score-panel">
+                <div>PUNTOS</div>
+                <div class="score-value" id="score">0</div>
+            </div>
+            <div class="level-panel">
+                <div>NIVEL</div>
+                <div class="level-value" id="level">1</div>
+            </div>
+            <div class="lives-panel">
+                <div>VIDAS</div>
+                <div class="lives-value" id="lives">3</div>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas" class="game-canvas"></canvas>
+        
+        <div class="menu-screen" id="menuScreen">
+            <div class="gamepad-decorations">
+                <div class="gamepad-icon gamepad-left">🎮</div>
+                <div class="gamepad-icon gamepad-right">🎮</div>
+                
+                <div class="d-pad">
+                    <div class="d-pad-cross">
+                        <div class="d-pad-horizontal"></div>
+                        <div class="d-pad-vertical"></div>
+                    </div>
+                </div>
+                
+                <div class="controller-buttons">
+                    <div class="controller-btn btn-x">X</div>
+                    <div class="controller-btn btn-o">O</div>
+                    <div class="controller-btn btn-square">□</div>
+                    <div class="controller-btn btn-triangle">△</div>
+                </div>
+                
+                <div class="analog-stick"></div>
+            </div>
+            
+            <h1 class="game-title">ARKANOID NEÓN</h1>
+            <h2 class="game-subtitle">Aventura Japonesa</h2>
+            <button class="menu-button" onclick="showSpeedMenu()">JUGAR</button>
+            <button class="menu-button privacy-button" onclick="showPrivacyPolicy()">POLÍTICA DE PRIVACIDAD</button>
+        </div>
+        
+        <div class="speed-menu" id="speedMenu">
+            <h1 class="speed-title">SELECCIONA VELOCIDAD</h1>
+            <button class="speed-option" onclick="setSpeed('slow')">
+                LENTO
+                <div class="speed-description">Velocidad estándar - Ideal para empezar</div>
+            </button>
+            <button class="speed-option" onclick="setSpeed('normal')">
+                NORMAL
+                <div class="speed-description">Velocidad rápida - Para jugadores experimentados</div>
+            </button>
+            <button class="speed-option" onclick="setSpeed('fast')">
+                RÁPIDO
+                <div class="speed-description">Velocidad alta - ¡Desafío serio!</div>
+            </button>
+            <button class="speed-option extreme" onclick="setSpeed('extreme')">
+                EXTREMO
+                <div class="speed-description">¡VELOCIDAD INTENSA! - Desafío para expertos</div>
+            </button>
+            <button class="menu-button" onclick="showMenu()" style="margin-top: 20px;">VOLVER</button>
+        </div>
+        
+        <div class="instructions-overlay" id="instructionsScreen">
+            <div class="instructions-content">
+                <h2 class="instructions-title">¡PREPÁRATE PARA LA BATALLA!</h2>
+                <div class="instructions-text">🎯 <strong>OBJETIVO:</strong> Destruye todos los bloques neón para avanzar</div>
+                <div class="instructions-text">🎮 <strong>CONTROLES:</strong> Mueve el ratón o desliza el dedo para controlar la paleta</div>
+                <div class="instructions-text">💎 <strong>NIVELES:</strong> 5 niveles con dificultad creciente</div>
+                <div class="instructions-text">❤️ <strong>VIDAS:</strong> Tienes 3 oportunidades</div>
+                <div class="instructions-text">🏆 <strong>PUNTOS:</strong> 10 por bloque + bonus por nivel</div>
+                <div class="instructions-text">⚡ <strong>VELOCIDAD:</strong> Modo <span id="selectedSpeed">NORMAL</span> seleccionado</div>
+                <div class="instructions-text">🎵 <strong>AUDIO:</strong> Música cyberpunk y efectos sintéticos</div>
+                <button class="instructions-continue" onclick="startGameAfterInstructions()">¡COMENZAR AVENTURA!</button>
+            </div>
+        </div>
+        
+        <div class="ad-overlay" id="adOverlay">
+            <div class="gamepad-decorations">
+                <div class="gamepad-icon gamepad-left">🎮</div>
+                <div class="gamepad-icon gamepad-right">🎮</div>
+                
+                <div class="d-pad">
+                    <div class="d-pad-cross">
+                        <div class="d-pad-horizontal"></div>
+                        <div class="d-pad-vertical"></div>
+                    </div>
+                </div>
+                
+                <div class="controller-buttons">
+                    <div class="controller-btn btn-x">X</div>
+                    <div class="controller-btn btn-o">O</div>
+                    <div class="controller-btn btn-square">□</div>
+                    <div class="controller-btn btn-triangle">△</div>
+                </div>
+                
+                <div class="analog-stick"></div>
+            </div>
+
+            <div class="ad-container">
+                <div class="ad-content">
+                    <div class="ad-title">🎮 ARKANOID NEÓN 🎮</div>
+                    <div class="ad-timer" id="adTimer">Anuncio termina en: 8s</div>
+                    <div class="ad-controls">
+                        <button class="ad-skip" id="adSkip" onclick="skipAd()">SALTAR (+1 VIDA)</button>
+                        <button class="ad-close" id="adClose" onclick="closeAd()" style="display: none;">CONTINUAR</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-over-screen" id="gameOverScreen">
+            <h1 class="game-over-title">GAME OVER</h1>
+            <div class="final-score" id="finalScore">Puntuación Final: 0</div>
+            <button class="menu-button" onclick="restartGame()">JUGAR DE NUEVO</button>
+            <button class="menu-button" onclick="showMenu()">MENÚ PRINCIPAL</button>
+        </div>
+        
+        <div class="celebration-overlay" id="celebrationScreen">
+            <div class="celebration-content">
+                <div class="celebration-title">¡NIVEL PERFECTO!</div>
+                <div class="celebration-subtitle">¡Sin pérdidas! ¡Increíble habilidad!</div>
+                <div class="celebration-bonus" id="celebrationBonus">+200 PUNTOS BONUS</div>
+            </div>
+        </div>
+
+        <div class="instructions-overlay" id="privacyScreen">
+            <div class="instructions-content">
+                <h2 class="instructions-title">POLÍTICA DE PRIVACIDAD</h2>
+                <div style="max-height: 400px; overflow-y: auto; text-align: left; line-height: 1.5;">
+                    <div class="instructions-text"><strong>RECOPILACIÓN DE DATOS:</strong></div>
+                    <div class="instructions-text">• Este juego utiliza Google AdMob para mostrar anuncios</div>
+                    <div class="instructions-text">• Google puede recopilar datos de uso y publicidad</div>
+                    <div class="instructions-text">• No recopilamos información personal directamente</div>
+                    
+                    <div class="instructions-text"><strong>USO DE LA INFORMACIÓN:</strong></div>
+                    <div class="instructions-text">• Mostrar anuncios relevantes</div>
+                    <div class="instructions-text">• Mejorar la experiencia del juego</div>
+                    <div class="instructions-text">• Estadísticas anónimas de uso</div>
+                    
+                    <div class="instructions-text"><strong>COOKIES Y ALMACENAMIENTO:</strong></div>
+                    <div class="instructions-text">• Guardamos configuraciones locales (audio, velocidad)</div>
+                    <div class="instructions-text">• Los anuncios pueden usar cookies de terceros</div>
+                    
+                    <div class="instructions-text"><strong>TERCEROS:</strong></div>
+                    <div class="instructions-text">• Google AdMob (Política: policies.google.com/privacy)</div>
+                    <div class="instructions-text">• No compartimos datos con otros terceros</div>
+                    
+                    <div class="instructions-text"><strong>DERECHOS DEL USUARIO:</strong></div>
+                    <div class="instructions-text">• Puedes deshabilitar los anuncios personalizados en tu dispositivo</div>
+                    <div class="instructions-text">• Configuración > Privacidad > Anuncios</div>
+                    
+                    <div class="instructions-text"><strong>CONSULTAS:</strong></div>
+                    <div class="instructions-text">• Para consultas sobre privacidad contacta a través de Play Store</div>
+                    
+                    <div class="instructions-text" style="margin-top: 20px;"><strong>Última actualización:</strong> Enero 2025</div>
+                </div>
+                <button class="instructions-continue" onclick="closePrivacyPolicy()">ENTENDIDO</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== SISTEMA DE AUDIO ====================
+        
+        class AudioSystem {
+            constructor() {
+                this.audioContext = null;
+                this.musicEnabled = true;
+                this.sfxEnabled = true;
+                this.backgroundMusic = null;
+                this.initAudio();
+            }
+            
+            async initAudio() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.startBackgroundMusic();
+                } catch (error) {
+                    console.log('Audio no disponible:', error);
+                }
+            }
+            
+            // Crear oscilador para sonidos sintéticos
+            createOscillator(frequency, type = 'sine', duration = 0.1) {
+                if (!this.audioContext || !this.sfxEnabled) return;
+                
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.frequency.value = frequency;
+                oscillator.type = type;
+                
+                gainNode.gain.value = 0.1;
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+                
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + duration);
+            }
+            
+            // Crear ruido blanco para efectos especiales
+            createNoise(duration = 0.1, volume = 0.1) {
+                if (!this.audioContext || !this.sfxEnabled) return;
+                
+                const bufferSize = this.audioContext.sampleRate * duration;
+                const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+                const output = buffer.getChannelData(0);
+                
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+                
+                const whiteNoise = this.audioContext.createBufferSource();
+                const gainNode = this.audioContext.createGain();
+                
+                whiteNoise.buffer = buffer;
+                whiteNoise.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                gainNode.gain.value = volume;
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+                
+                whiteNoise.start();
+            }
+            
+            // Música de fondo continua estilo cyberpunk
+            startBackgroundMusic() {
+                if (!this.audioContext || !this.musicEnabled) return;
+                
+                this.stopBackgroundMusic();
+                
+                // Crear múltiples capas de sonido para ambiente cyberpunk
+                this.createAmbientLayer();
+                this.createBassLayer();
+                this.createArpeggiatorLayer();
+            }
+            
+            createAmbientLayer() {
+                const playAmbient = () => {
+                    if (!this.musicEnabled || !this.audioContext) return;
+                    
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    const filter = this.audioContext.createBiquadFilter();
+                    
+                    oscillator.connect(filter);
+                    filter.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    oscillator.frequency.value = 80 + Math.random() * 40;
+                    oscillator.type = 'sawtooth';
+                    
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 200;
+                    
+                    gainNode.gain.value = 0;
+                    gainNode.gain.linearRampToValueAtTime(0.03, this.audioContext.currentTime + 0.5);
+                    gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 8);
+                    
+                    oscillator.start();
+                    oscillator.stop(this.audioContext.currentTime + 8);
+                    
+                    setTimeout(playAmbient, 6000 + Math.random() * 4000);
+                };
+                
+                playAmbient();
+            }
+            
+            createBassLayer() {
+                const playBass = () => {
+                    if (!this.musicEnabled || !this.audioContext) return;
+                    
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    const notes = [65.4, 73.4, 82.4, 98]; // Notas bajas para ambiente
+                    oscillator.frequency.value = notes[Math.floor(Math.random() * notes.length)];
+                    oscillator.type = 'square';
+                    
+                    gainNode.gain.value = 0.02;
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 2);
+                    
+                    oscillator.start();
+                    oscillator.stop(this.audioContext.currentTime + 2);
+                    
+                    setTimeout(playBass, 2500 + Math.random() * 1500);
+                };
+                
+                setTimeout(playBass, 1000);
+            }
+            
+            createArpeggiatorLayer() {
+                const playArp = () => {
+                    if (!this.musicEnabled || !this.audioContext) return;
+                    
+                    const notes = [261.63, 329.63, 392, 523.25]; // C, E, G, C alta
+                    let noteIndex = 0;
+                    
+                    const playNote = () => {
+                        if (!this.musicEnabled || !this.audioContext) return;
+                        
+                        const oscillator = this.audioContext.createOscillator();
+                        const gainNode = this.audioContext.createGain();
+                        const filter = this.audioContext.createBiquadFilter();
+                        
+                        oscillator.connect(filter);
+                        filter.connect(gainNode);
+                        gainNode.connect(this.audioContext.destination);
+                        
+                        oscillator.frequency.value = notes[noteIndex % notes.length];
+                        oscillator.type = 'triangle';
+                        
+                        filter.type = 'highpass';
+                        filter.frequency.value = 300;
+                        
+                        gainNode.gain.value = 0.01;
+                        gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.3);
+                        
+                        oscillator.start();
+                        oscillator.stop(this.audioContext.currentTime + 0.3);
+                        
+                        noteIndex++;
+                        if (noteIndex < 8) {
+                            setTimeout(playNote, 200);
+                        }
+                    };
+                    
+                    playNote();
+                    setTimeout(playArp, 8000 + Math.random() * 4000);
+                };
+                
+                setTimeout(playArp, 3000);
+            }
+            
+            stopBackgroundMusic() {
+                // La música se detiene naturalmente cuando se crean nuevos contextos
+            }
+            
+            // Efectos de sonido específicos del juego
+            playBallBounce() {
+                this.createOscillator(800 + Math.random() * 400, 'sine', 0.05);
+            }
+            
+            playBrickDestroy() {
+                // Sonido de destrucción con múltiples frecuencias
+                this.createOscillator(400, 'square', 0.1);
+                setTimeout(() => this.createOscillator(300, 'sawtooth', 0.1), 50);
+                setTimeout(() => this.createNoise(0.05, 0.05), 25);
+            }
+            
+            playPaddleHit() {
+                this.createOscillator(600, 'triangle', 0.08);
+                setTimeout(() => this.createOscillator(700, 'sine', 0.06), 30);
+            }
+            
+            playLifeLost() {
+                // Sonido dramático descendente
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        this.createOscillator(400 - i * 80, 'square', 0.2);
+                    }, i * 100);
+                }
+                setTimeout(() => this.createNoise(0.3, 0.08), 200);
+            }
+            
+            playLevelComplete() {
+                // Melodía ascendente de victoria
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C, E, G, C alta
+                notes.forEach((freq, i) => {
+                    setTimeout(() => {
+                        this.createOscillator(freq, 'triangle', 0.3);
+                    }, i * 150);
+                });
+            }
+            
+            playGameOver() {
+                // Sonido dramático de game over
+                const notes = [400, 350, 300, 250, 200];
+                notes.forEach((freq, i) => {
+                    setTimeout(() => {
+                        this.createOscillator(freq, 'sawtooth', 0.4);
+                    }, i * 200);
+                });
+                setTimeout(() => this.createNoise(0.5, 0.1), 500);
+            }
+            
+            playPerfectLevel() {
+                // Sonido especial para nivel perfecto
+                for (let i = 0; i < 8; i++) {
+                    setTimeout(() => {
+                        this.createOscillator(800 + i * 100, 'sine', 0.2);
+                        this.createOscillator(400 + i * 50, 'triangle', 0.2);
+                    }, i * 100);
+                }
+            }
+            
+            playMenuSound() {
+                this.createOscillator(800, 'triangle', 0.1);
+                setTimeout(() => this.createOscillator(1000, 'sine', 0.08), 50);
+            }
+            
+            toggleMusic() {
+                this.musicEnabled = !this.musicEnabled;
+                const gameButton = document.getElementById('musicToggle');
+                
+                if (this.musicEnabled) {
+                    if (gameButton) {
+                        gameButton.textContent = '🎵 MÚSICA';
+                        gameButton.classList.remove('muted');
+                    }
+                    this.startBackgroundMusic();
+                } else {
+                    if (gameButton) {
+                        gameButton.textContent = '🔇 MÚSICA';
+                        gameButton.classList.add('muted');
+                    }
+                    this.stopBackgroundMusic();
+                }
+            }
+            
+            toggleSFX() {
+                this.sfxEnabled = !this.sfxEnabled;
+                const gameButton = document.getElementById('sfxToggle');
+                
+                if (this.sfxEnabled) {
+                    if (gameButton) {
+                        gameButton.textContent = '🔊 SFX';
+                        gameButton.classList.remove('muted');
+                    }
+                    this.playMenuSound(); // Sonido de confirmación
+                } else {
+                    if (gameButton) {
+                        gameButton.textContent = '🔇 SFX';
+                        gameButton.classList.add('muted');
+                    }
+                }
+            }
+        }
+        
+        // Instancia global del sistema de audio
+        const audioSystem = new AudioSystem();
+        
+        // ==================== FUNCIONES GLOBALES DE AUDIO ====================
+        
+        function toggleMusic() {
+            audioSystem.toggleMusic();
+        }
+        
+        function toggleSFX() {
+            audioSystem.toggleSFX();
+        }
+        
+        // ==================== JUEGO PRINCIPAL ====================
+        
+        // Variables globales
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let gameState = 'menu';
+        let score = 0;
+        let level = 1;
+        let lives = 3;
+        let animationId;
+        let speedMode = 'normal';
+        let gameSpeed = 0; // Velocidad fija para toda la partida
+        let adCounter = 0;
+        let adsShown = 0;
+        
+        // Configuración del canvas
+        function setupCanvas() {
+            canvas.width = Math.min(window.innerWidth * 0.9, 800);
+            canvas.height = Math.min(window.innerHeight * 0.8, 600);
+        }
+        
+        setupCanvas();
+        window.addEventListener('resize', setupCanvas);
+        
+        // Objetos del juego
+        const paddle = {
+            x: 0,
+            y: 0,
+            width: 120,
+            height: 15,
+            speed: 12
+        };
+        
+        const ball = {
+            x: 0,
+            y: 0,
+            radius: 8,
+            dx: 4,
+            dy: -4
+        };
+        
+        let bricks = [];
+        let particles = [];
+        let powerUps = [];
+        
+        // Configuración de velocidades fijas (incrementadas gradualmente)
+        const speedConfig = {
+            'slow': 8.0,      // Velocidad lenta (incrementada)
+            'normal': 11.0,   // Velocidad normal (incrementada)
+            'fast': 14.0,     // Velocidad rápida (incrementada)
+            'extreme': 17.0   // Velocidad extrema (incrementada)
+        };
+        
+        // Configuración de niveles
+        const levelConfig = {
+            1: { rows: 4, cols: 8, baseSpeed: 6.5 },
+            2: { rows: 5, cols: 9, baseSpeed: 7.2 },
+            3: { rows: 5, cols: 10, baseSpeed: 8.0 },
+            4: { rows: 6, cols: 10, baseSpeed: 8.8 },
+            5: { rows: 6, cols: 12, baseSpeed: 9.5 }
+        };
+        
+        // Variables para tracking de rendimiento
+        let ballsLostThisLevel = 0;
+        let perfectLevel = false;
+        
+        // Sistema de anuncios Google AdMob
+        let adTimer;
+        let adTimeLeft = 8;
+        let adWatched = false;
+        
+        function showAd() {
+            adsShown++;
+            adCounter++;
+            adTimeLeft = 8;
+            adWatched = false;
+            
+            const canSkip = adCounter <= 2;
+            const isThirdAd = adCounter > 2;
+            
+            document.getElementById('adOverlay').style.display = 'flex';
+            document.getElementById('adSkip').style.display = canSkip ? 'block' : 'none';
+            document.getElementById('adClose').style.display = 'none';
+            
+            // Textos de anuncios simplificados (solo para mensajes de confirmación)
+            document.getElementById('adTimer').innerHTML = isThirdAd 
+                ? '<strong>ANUNCIO OBLIGATORIO</strong><br>Tiempo restante: 8s<br><em>Ganaste +1 vida al completar</em>'
+                : `Tiempo restante: ${adTimeLeft}s<br><em>Ganaste +1 vida</em>`;
+            
+            // Mensaje específico para el tercer anuncio obligatorio
+            if (isThirdAd) {
+                document.getElementById('adTimer').innerHTML = '<strong>ANUNCIO OBLIGATORIO</strong><br>Tiempo restante: 8s<br><em>Ganaste +1 vida al completar</em>';
+            }
+            
+            adTimer = setInterval(() => {
+                adTimeLeft--;
+                
+                if (isThirdAd) {
+                    document.getElementById('adTimer').innerHTML = `<strong>ANUNCIO OBLIGATORIO</strong><br>Tiempo restante: ${adTimeLeft}s<br><em>Ganaste +1 vida al completar</em>`;
+                } else {
+                    document.getElementById('adTimer').innerHTML = `Anuncio termina en: ${adTimeLeft}s<br><em>Ganaste +1 vida</em>`;
+                }
+                
+                if (adTimeLeft <= 0) {
+                    clearInterval(adTimer);
+                    adWatched = true;
+                    document.getElementById('adSkip').style.display = 'none';
+                    document.getElementById('adClose').style.display = 'block';
+                    document.getElementById('adTimer').innerHTML = '<strong>¡ANUNCIO COMPLETADO!</strong><br><em>Ganaste +1 vida</em>';
+                }
+            }, 1000);
+        }
+        
+        function skipAd() {
+            if (adCounter <= 2) {
+                clearInterval(adTimer);
+                // Otorgar vida por saltar anuncio
+                lives++;
+                updateUI();
+                audioSystem.playMenuSound();
+                
+                // Mostrar mensaje de recompensa
+                showAdReward(false);
+                
+                setTimeout(() => {
+                    document.getElementById('adOverlay').style.display = 'none';
+                    continueGame();
+                }, 1500);
+            }
+        }
+        
+        function closeAd() {
+            clearInterval(adTimer);
+            // Otorgar vida por ver anuncio completo
+            lives++;
+            updateUI();
+            audioSystem.playMenuSound();
+            
+            // Mostrar mensaje de recompensa
+            showAdReward(true);
+            
+            setTimeout(() => {
+                document.getElementById('adOverlay').style.display = 'none';
+                continueGame();
+            }, 1500);
+        }
+        
+        function showAdReward(watchedComplete) {
+            const rewardMsg = document.createElement('div');
+            rewardMsg.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: linear-gradient(45deg, #00ff00, #80ff00);
+                color: #000;
+                padding: 20px 30px;
+                border-radius: 15px;
+                font-family: 'Orbitron', monospace;
+                font-weight: 900;
+                font-size: 18px;
+                text-align: center;
+                box-shadow: 0 0 30px rgba(0, 255, 0, 0.8);
+                z-index: 35;
+                animation: celebration-bounce 0.5s ease-out;
+            `;
+            
+            rewardMsg.innerHTML = watchedComplete 
+                ? '¡ANUNCIO COMPLETADO!<br>Ganaste +1 vida<br><small>Gracias por ver el anuncio</small>'
+                : '¡RECOMPENSA OTORGADA!<br>Ganaste +1 vida<br><small>Gracias por tu participación</small>';
+            
+            document.getElementById('adOverlay').appendChild(rewardMsg);
+            
+            setTimeout(() => {
+                if (rewardMsg.parentNode) {
+                    rewardMsg.parentNode.removeChild(rewardMsg);
+                }
+            }, 1500);
+        }
+        
+        function continueGame() {
+            if (gameState === 'gameOver') {
+                showGameOver();
+            } else {
+                gameLoop();
+            }
+        }
+        
+        // Menú de velocidades
+        function showSpeedMenu() {
+            audioSystem.playMenuSound();
+            document.getElementById('menuScreen').style.display = 'none';
+            document.getElementById('speedMenu').style.display = 'flex';
+        }
+        
+        function setSpeed(speed) {
+            audioSystem.playMenuSound();
+            speedMode = speed;
+            gameSpeed = speedConfig[speed]; // Establecer velocidad fija una sola vez
+            document.getElementById('speedMenu').style.display = 'none';
+            showInstructions();
+        }
+        
+        function showInstructions() {
+            const speedNames = {
+                'slow': 'LENTO',
+                'normal': 'NORMAL', 
+                'fast': 'RÁPIDO',
+                'extreme': 'EXTREMO'
+            };
+            
+            document.getElementById('selectedSpeed').textContent = speedNames[speedMode];
+            document.getElementById('selectedSpeed').style.color = speedMode === 'extreme' ? '#ff0040' : '#ffff00';
+            document.getElementById('instructionsScreen').style.display = 'flex';
+        }
+        
+        function startGameAfterInstructions() {
+            audioSystem.playMenuSound();
+            document.getElementById('instructionsScreen').style.display = 'none';
+            startGame();
+        }
+        
+        // Inicializar posiciones
+        function resetPositions() {
+            paddle.x = canvas.width / 2 - paddle.width / 2;
+            paddle.y = canvas.height - 40;
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height - 60;
+            
+            // Usar la velocidad fija establecida al inicio del juego
+            ball.dx = gameSpeed * (Math.random() > 0.5 ? 1 : -1);
+            ball.dy = -gameSpeed;
+        }
+        
+        // Crear efectos de fuegos artificiales
+        function createFireworks() {
+            const colors = ['#ffff00', '#ff00ff', '#00ffff', '#ff4080', '#80ff40'];
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    const firework = document.createElement('div');
+                    firework.className = 'celebration-firework';
+                    firework.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    firework.style.left = Math.random() * 100 + '%';
+                    firework.style.top = Math.random() * 100 + '%';
+                    firework.style.boxShadow = `0 0 20px ${firework.style.backgroundColor}`;
+                    
+                    document.getElementById('celebrationScreen').appendChild(firework);
+                    
+                    setTimeout(() => {
+                        if (firework.parentNode) {
+                            firework.parentNode.removeChild(firework);
+                        }
+                    }, 2000);
+                }, i * 100);
+            }
+        }
+        
+        // Mostrar celebración por nivel perfecto
+        function showPerfectLevelCelebration() {
+            const bonusPoints = 200;
+            score += bonusPoints;
+            
+            audioSystem.playPerfectLevel();
+            
+            document.getElementById('celebrationBonus').textContent = `+${bonusPoints} PUNTOS BONUS`;
+            document.getElementById('celebrationScreen').style.display = 'flex';
+            
+            createFireworks();
+            
+            setTimeout(() => {
+                document.getElementById('celebrationScreen').style.display = 'none';
+            }, 3000);
+        }
+        
+        // Crear bloques
+        function createBricks() {
+            bricks = [];
+            const config = levelConfig[level] || levelConfig[5];
+            const brickWidth = (canvas.width - 40) / config.cols;
+            const brickHeight = 25;
+            const colors = ['#ff00ff', '#00ffff', '#ffff00', '#ff4080', '#80ff40'];
+            
+            for (let row = 0; row < config.rows; row++) {
+                for (let col = 0; col < config.cols; col++) {
+                    bricks.push({
+                        x: col * brickWidth + 20,
+                        y: row * brickHeight + 60,
+                        width: brickWidth - 2,
+                        height: brickHeight - 2,
+                        color: colors[row % colors.length],
+                        visible: true
+                    });
+                }
+            }
+        }
+        
+        // Crear partículas
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 8; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: (Math.random() - 0.5) * 8,
+                    dy: (Math.random() - 0.5) * 8,
+                    color: color,
+                    life: 30,
+                    maxLife: 30,
+                    size: Math.random() * 3 + 2
+                });
+            }
+        }
+        
+        // Funciones de dibujo
+        function drawPaddle() {
+            ctx.save();
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 15;
+            
+            const gradient = ctx.createLinearGradient(paddle.x, paddle.y, paddle.x + paddle.width, paddle.y);
+            gradient.addColorStop(0, '#00ffff');
+            gradient.addColorStop(0.5, '#ffffff');
+            gradient.addColorStop(1, '#00ffff');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+            
+            ctx.strokeStyle = '#00ffff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(paddle.x, paddle.y, paddle.width, paddle.height);
+            
+            ctx.restore();
+        }
+        
+        function drawBall() {
+            ctx.save();
+            ctx.shadowColor = '#ffff00';
+            ctx.shadowBlur = 20;
+            
+            const gradient = ctx.createRadialGradient(ball.x, ball.y, 0, ball.x, ball.y, ball.radius);
+            gradient.addColorStop(0, '#ffffff');
+            gradient.addColorStop(0.7, '#ffff00');
+            gradient.addColorStop(1, '#ffaa00');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+        
+        function drawBrick(brick) {
+            if (!brick.visible) return;
+            
+            ctx.save();
+            ctx.shadowColor = brick.color;
+            ctx.shadowBlur = 10;
+            
+            const gradient = ctx.createLinearGradient(brick.x, brick.y, brick.x + brick.width, brick.y + brick.height);
+            gradient.addColorStop(0, brick.color);
+            gradient.addColorStop(0.5, '#ffffff');
+            gradient.addColorStop(1, brick.color);
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
+            
+            ctx.strokeStyle = brick.color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(brick.x, brick.y, brick.width, brick.height);
+            
+            ctx.restore();
+        }
+        
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.save();
+                ctx.globalAlpha = particle.life / particle.maxLife;
+                ctx.fillStyle = particle.color;
+                ctx.shadowColor = particle.color;
+                ctx.shadowBlur = 5;
+                
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            });
+        }
+        
+        // Lógica de colisiones
+        function checkCollisions() {
+            // Colisión con paredes
+            if (ball.x <= ball.radius || ball.x >= canvas.width - ball.radius) {
+                ball.dx = -ball.dx;
+                audioSystem.playBallBounce();
+                createParticles(ball.x, ball.y, '#00ffff');
+            }
+            
+            if (ball.y <= ball.radius) {
+                ball.dy = -ball.dy;
+                audioSystem.playBallBounce();
+                createParticles(ball.x, ball.y, '#00ffff');
+            }
+            
+            // Colisión con paleta
+            if (ball.y + ball.radius >= paddle.y && 
+                ball.x >= paddle.x && 
+                ball.x <= paddle.x + paddle.width &&
+                ball.dy > 0) {
+                
+                ball.dy = -ball.dy;
+                
+                // Cambiar ángulo basado en donde golpeó
+                const hitPos = (ball.x - paddle.x) / paddle.width;
+                ball.dx = (hitPos - 0.5) * 10;
+                
+                audioSystem.playPaddleHit();
+                createParticles(ball.x, ball.y, '#00ffff');
+            }
+            
+            // Colisión con bloques
+            bricks.forEach(brick => {
+                if (!brick.visible) return;
+                
+                if (ball.x + ball.radius >= brick.x &&
+                    ball.x - ball.radius <= brick.x + brick.width &&
+                    ball.y + ball.radius >= brick.y &&
+                    ball.y - ball.radius <= brick.y + brick.height) {
+                    
+                    ball.dy = -ball.dy;
+                    brick.visible = false;
+                    score += 10;
+                    
+                    audioSystem.playBrickDestroy();
+                    createParticles(brick.x + brick.width/2, brick.y + brick.height/2, brick.color);
+                }
+            });
+            
+            // Bola perdida - cada pelota que cae resta una vida
+            if (ball.y > canvas.height) {
+                ballsLostThisLevel++;
+                lives--;
+                
+                audioSystem.playLifeLost();
+                createParticles(canvas.width / 2, canvas.height - 50, '#ff0040');
+                
+                if (lives <= 0) {
+                    gameState = 'gameOver';
+                    showAd();
+                    return;
+                } else {
+                    resetPositions();
+                }
+            }
+        }
+        
+        // Actualizar elementos
+        function update() {
+            if (gameState !== 'playing') return;
+            
+            // Actualizar bola
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+            
+            // Actualizar partículas
+            particles.forEach((particle, index) => {
+                particle.x += particle.dx;
+                particle.y += particle.dy;
+                particle.life--;
+                particle.dx *= 0.98;
+                particle.dy *= 0.98;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+            
+            // Verificar colisiones
+            checkCollisions();
+            
+            // Verificar si el nivel está completo
+            const visibleBricks = bricks.filter(brick => brick.visible);
+            if (visibleBricks.length === 0) {
+                perfectLevel = (ballsLostThisLevel === 0);
+                
+                score += 100;
+                level++;
+                
+                audioSystem.playLevelComplete();
+                
+                if (level <= 5) {
+                    if (perfectLevel) {
+                        showPerfectLevelCelebration();
+                    }
+                    
+                    const showAdDelay = perfectLevel ? 3500 : 1000;
+                    
+                    if (level % 2 === 0 || adCounter === 0) {
+                        gameState = 'levelComplete';
+                        setTimeout(() => showAd(), showAdDelay);
+                        setTimeout(() => {
+                            if (gameState === 'levelComplete') {
+                                ballsLostThisLevel = 0;
+                                createBricks();
+                                resetPositions();
+                                gameState = 'playing';
+                                gameLoop();
+                            }
+                        }, showAdDelay + 1000);
+                    } else {
+                        gameState = 'levelComplete';
+                        setTimeout(() => {
+                            ballsLostThisLevel = 0;
+                            createBricks();
+                            resetPositions();
+                            gameState = 'playing';
+                            gameLoop();
+                        }, perfectLevel ? 3500 : 2000);
+                    }
+                } else {
+                    score += 1000;
+                    if (perfectLevel) {
+                        showPerfectLevelCelebration();
+                    }
+                    gameState = 'gameOver';
+                    setTimeout(() => showAd(), perfectLevel ? 3500 : 1000);
+                }
+            }
+            
+            // Mantener paleta en pantalla
+            if (paddle.x < 0) paddle.x = 0;
+            if (paddle.x + paddle.width > canvas.width) {
+                paddle.x = canvas.width - paddle.width;
+            }
+        }
+        
+        // Renderizar juego
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (gameState === 'playing') {
+                drawPaddle();
+                drawBall();
+                bricks.forEach(drawBrick);
+                drawParticles();
+            } else if (gameState === 'levelComplete') {
+                drawPaddle();
+                drawBall();
+                bricks.forEach(drawBrick);
+                drawParticles();
+                
+                ctx.save();
+                ctx.fillStyle = '#00ffff';
+                ctx.font = 'bold 32px Orbitron';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = '#00ffff';
+                ctx.shadowBlur = 20;
+                ctx.fillText('¡NIVEL COMPLETADO!', canvas.width/2, canvas.height/2);
+                ctx.font = 'bold 20px Orbitron';
+                ctx.fillText(`Preparando Nivel ${level}...`, canvas.width/2, canvas.height/2 + 50);
+                ctx.restore();
+            }
+            
+            updateUI();
+        }
+        
+        // Loop principal
+        function gameLoop() {
+            update();
+            render();
+            
+            if (gameState === 'playing') {
+                animationId = requestAnimationFrame(gameLoop);
+            } else if (gameState === 'levelComplete') {
+                animationId = requestAnimationFrame(gameLoop);
+            }
+        }
+        
+        // Controles
+        canvas.addEventListener('mousemove', (e) => {
+            if (gameState !== 'playing') return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            paddle.x = mouseX - paddle.width / 2;
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            if (gameState !== 'playing') return;
+            
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const touchX = touch.clientX - rect.left;
+            paddle.x = touchX - paddle.width / 2;
+        });
+        
+        // Funciones del UI
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+            document.getElementById('lives').textContent = lives;
+        }
+        
+        function startGame() {
+            gameState = 'playing';
+            score = 0;
+            level = 1;
+            lives = 3;
+            adCounter = 0;
+            ballsLostThisLevel = 0;
+            perfectLevel = false;
+            
+            // Establecer velocidad fija para toda la partida
+            gameSpeed = speedConfig[speedMode];
+            
+            document.getElementById('gameOverScreen').style.display = 'none';
+            
+            createBricks();
+            resetPositions();
+            particles = [];
+            
+            updateUI();
+            gameLoop();
+        }
+        
+        function showGameOver() {
+            audioSystem.playGameOver();
+            document.getElementById('finalScore').innerHTML = `
+                Puntuación Final: <span style="color: #ffff00">${score}</span><br>
+                Velocidad: <span style="color: #ff00ff">${speedMode.toUpperCase()}</span><br>
+                Nivel Alcanzado: <span style="color: #00ffff">${level > 5 ? '¡COMPLETADO!' : level}</span>
+            `;
+            document.getElementById('gameOverScreen').style.display = 'flex';
+            cancelAnimationFrame(animationId);
+        }
+        
+        function restartGame() {
+            audioSystem.playMenuSound();
+            showSpeedMenu();
+        }
+        
+        function showMenu() {
+            audioSystem.playMenuSound();
+            gameState = 'menu';
+            document.getElementById('menuScreen').style.display = 'flex';
+            document.getElementById('speedMenu').style.display = 'none';
+            document.getElementById('gameOverScreen').style.display = 'none';
+            cancelAnimationFrame(animationId);
+        }
+
+        function showPrivacyPolicy() {
+            audioSystem.playMenuSound();
+            document.getElementById('privacyScreen').style.display = 'flex';
+        }
+
+        function closePrivacyPolicy() {
+            audioSystem.playMenuSound();
+            document.getElementById('privacyScreen').style.display = 'none';
+        }
+        
+        // Inicialización
+        updateUI();
+    </script>
+</body>
+</html>
